@@ -27,18 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // If no validation errors, attempt login
     if (empty($errors)) {
         try {
-            $stmt = $conn->prepare("SELECT user_id, username, password, role, status FROM users WHERE username = :username OR email = :email");
+            $stmt = $conn->prepare("SELECT user_id, username, password, role FROM users WHERE username = :username OR email = :email");
             $stmt->bindParam(':username', $username);
             $stmt->bindParam(':email', $username); // Allow login with email too
             $stmt->execute();
             
             if ($stmt->rowCount() > 0) {
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
+ 
                 
-                // Check if account is active
-                if ($user['status'] !== 'active') {
-                    $errors[] = "Your account is not active. Please contact the administrator.";
-                } else {
+        
+            
                     // Verify password
                     if (password_verify($password, $user['password'])) {
                         // Set session variables
@@ -78,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         $errors[] = "Invalid username or password";
                     }
-                }
+                
             } else {
                 $errors[] = "Invalid username or password";
             }

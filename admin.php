@@ -62,7 +62,7 @@ try {
 // Get recent users
 try {
     $stmt = $conn->prepare("
-        SELECT user_id, username, email, full_name, role, status, created_at
+        SELECT user_id, username, email, role, created_at
         FROM users
         ORDER BY created_at DESC
         LIMIT 10
@@ -172,7 +172,7 @@ $page_title = "Admin Panel";
                             <div class="stat-label">Total Users</div>
                         </div>
                         <div class="stat-footer">
-                            <span class="stat-change positive">+<?php echo $new_users_month; ?> this month</span>
+                            <!-- <span class="stat-change positive">+<?php echo $new_users_month; ?> this month</span> -->
                         </div>
                     </div>
                     
@@ -183,7 +183,7 @@ $page_title = "Admin Panel";
                             <div class="stat-label">Total Materials</div>
                         </div>
                         <div class="stat-footer">
-                            <span class="stat-change positive">+<?php echo $new_materials_month; ?> this month</span>
+                            <!-- <span class="stat-change positive">+<?php echo $new_materials_month; ?> this month</span> -->
                         </div>
                     </div>
                     
@@ -209,18 +209,18 @@ $page_title = "Admin Panel";
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
                         <div class="stat-content">
-                            <div class="stat-value"><?php echo number_format($total_borrowed); ?></div>
+                            <!-- <div class="stat-value"><?php echo number_format($total_borrowed); ?></div> -->
                             <div class="stat-label">Total Borrowings</div>
                         </div>
                         <div class="stat-footer">
-                            <span class="stat-info"><?php echo number_format($active_borrowed); ?> active</span>
+                            <!-- <span class="stat-info"><?php echo number_format($active_borrowed); ?> active</span> -->
                         </div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                         <div class="stat-content">
-                            <div class="stat-value"><?php echo number_format($overdue_books); ?></div>
+                            <!-- <div class="stat-value"><?php echo number_format($overdue_books); ?></div> -->
                             <div class="stat-label">Overdue Books</div>
                         </div>
                         <div class="stat-footer">

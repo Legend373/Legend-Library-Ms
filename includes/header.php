@@ -209,9 +209,11 @@ $user_name = $is_logged_in ? $_SESSION['username'] : '';
                         
                         <?php if ($is_admin): ?>
                             <li><a href="<?php echo $base_url; ?>/admin.php" class="<?php echo $current_page === 'admin.php' ? 'active' : ''; ?>">Admin</a></li>
-                        <?php endif; ?>
+                            <?php endif; ?>
+                        <?php if($_SESSION['role'] == 'teacher'): ?>
                         
                         <li><a href="<?php echo $base_url; ?>/upload.php" class="<?php echo $current_page === 'upload.php' ? 'active' : ''; ?>">Upload</a></li>
+                        <?php endif; ?>
                     <?php endif; ?>
                     
                     <li><a href="<?php echo $base_url; ?>/about.php" class="<?php echo $current_page === 'about.php' ? 'active' : ''; ?>">About</a></li>

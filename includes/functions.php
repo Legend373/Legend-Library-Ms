@@ -109,8 +109,8 @@ function hasPermission($permission) {
         'upload_material' => ['teacher', 'admin'],
         'edit_material' => ['teacher', 'admin'], // Teacher can only edit their own materials
         'delete_material' => ['teacher', 'admin'], // Teacher can only delete their own materials
-        'borrow_book' => ['student', 'admin'],
-        'return_book' => ['student', 'admin'],
+        'borrow_book' => ['student','teacher', 'admin'],
+        'return_book' => ['student','teacher', 'admin'],
         'manage_users' => ['admin'],
         'manage_books' => ['admin'],
         'view_logs' => ['admin']
@@ -172,4 +172,17 @@ function backupDatabase($filename = null) {
     system($command, $return_var);
     
     return $return_var === 0 ? $filename : false;
+}
+function requireLogin() {
+    // Start the session if it hasn't been started yet
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        // Redirect to login page if not authenticated
+        header("Location: login.php");
+        exit();
+    }
 }

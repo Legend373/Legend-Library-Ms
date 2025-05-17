@@ -81,13 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Insert user into database
             $stmt = $conn->prepare("
-                INSERT INTO users (username, email, password, full_name, role, status, created_at)
-                VALUES (:username, :email, :password, :full_name, :role, 'active', NOW())
+                INSERT INTO users (username, email, password, role, created_at)
+                VALUES (:username, :email, :password, :role, NOW())
             ");
             $stmt->bindParam(':username', $username);
             $stmt->bindParam(':email', $email);
             $stmt->bindParam(':password', $hashed_password);
-            $stmt->bindParam(':full_name', $full_name);
+            // $stmt->bindParam(':full_name', $full_name);
             $stmt->bindParam(':role', $role);
             $stmt->execute();
             

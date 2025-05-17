@@ -9,6 +9,7 @@ if (!isLoggedIn()) {
     header("Location: " . $base_url . "/login.php");
     exit;
 }
+$favorite_materials=[];
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
@@ -26,10 +27,10 @@ try {
 // Get user's recent activities
 try {
     $stmt = $conn->prepare("
-        SELECT a.activity_type, a.timestamp, a.details
-        FROM user_activities a
+        SELECT a.action,  a.details,a.log_date
+        FROM activity_logs a
         WHERE a.user_id = :user_id
-        ORDER BY a.timestamp DESC
+        ORDER BY a.log_date DESC
         LIMIT 10
     ");
     $stmt->bindParam(':user_id', $user_id);
@@ -43,7 +44,7 @@ try {
 try {
     $stmt = $conn->prepare("
         SELECT b.book_id, b.title, b.author, bb.borrow_date, bb.due_date, bb.status
-        FROM borrowed_books bb
+        FROM borrowings bb
         JOIN books b ON bb.book_id = b.book_id
         WHERE bb.user_id = :user_id AND bb.status != 'returned'
         ORDER BY bb.due_date ASC
@@ -72,23 +73,23 @@ try {
     $error_message = "Error fetching uploaded materials: " . $e->getMessage();
 }
 
-// Get user's favorite materials
-try {
-    $stmt = $conn->prepare("
-        SELECT m.material_id, m.title, m.category, m.upload_date, u.username as uploader
-        FROM material_favorites mf
-        JOIN materials m ON mf.material_id = m.material_id
-        JOIN users u ON m.uploaded_by = u.user_id
-        WHERE mf.user_id = :user_id
-        ORDER BY mf.date_added DESC
-        LIMIT 5
-    ");
-    $stmt->bindParam(':user_id', $user_id);
-    $stmt->execute();
-    $favorite_materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch(PDOException $e) {
-    $error_message = "Error fetching favorite materials: " . $e->getMessage();
-}
+// // Get user's favorite materials
+// try {
+//     $stmt = $conn->prepare("
+//         SELECT m.material_id, m.title, m.category, m.upload_date, u.username as uploader
+//         FROM material_favorites mf
+//         JOIN materials m ON mf.material_id = m.material_id
+//         JOIN users u ON m.uploaded_by = u.user_id
+//         WHERE mf.user_id = :user_id
+//         ORDER BY mf.date_added DESC
+//         LIMIT 5
+//     ");
+//     $stmt->bindParam(':user_id', $user_id);
+//     $stmt->execute();
+//     $favorite_materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// } catch(PDOException $e) {
+//     $error_message = "Error fetching favorite materials: " . $e->getMessage();
+// }
 
 // Log dashboard visit
 logActivity($user_id, 'visit_dashboard');
@@ -118,7 +119,7 @@ $page_title = "Dashboard";
                 <div class="stat-label">Books Borrowed</div>
             </div>
         </div>
-        
+        <?php if($_SESSION['role'] == 'teacher'): ?>
         <div class="stat-card">
             <div class="stat-icon"><i class="fas fa-upload"></i></div>
             <div class="stat-content">
@@ -126,11 +127,12 @@ $page_title = "Dashboard";
                 <div class="stat-label">Materials Uploaded</div>
             </div>
         </div>
+    <?php endif; ?>
         
         <div class="stat-card">
             <div class="stat-icon"><i class="fas fa-heart"></i></div>
             <div class="stat-content">
-                <div class="stat-value"><?php echo count($favorite_materials); ?></div>
+                <!-- <div class="stat-value"><?php echo count($favorite_materials); ?></div> -->
                 <div class="stat-label">Favorites</div>
             </div>
         </div>
@@ -206,6 +208,7 @@ $page_title = "Dashboard";
         </div>
         
         <!-- Uploaded Materials Section -->
+         <?php if ($_SESSION['role'] == 'teacher'||$_SESSION['role'] == 'admin'):?>
         <div class="dashboard-section">
             <div class="section-header">
                 <h2>Your Uploads</h2>
@@ -241,7 +244,48 @@ $page_title = "Dashboard";
                 </div>
             <?php endif; ?>
         </div>
+<?php endif; ?>
+    
         
+        
+        
+        
+        <!-- Favorite Materials Section -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Your Favorites</h2>
+                <a href="<?php echo $base_url; ?>/favorites.php" class="view-all">View All</a>
+            </div>
+            
+            <?php if (empty($favorite_materials)): ?>
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-heart"></i></div>
+                    <p>You haven't added any materials to favorites yet.</p>
+                    <a href="<?php echo $base_url; ?>/search.php" class="btn primary">Browse Materials</a>
+                </div>
+            <?php else: ?>
+                <div class="materials-grid">
+                    <?php foreach ($favorite_materials as $material): ?>
+                        <div class="material-card">
+                            <h3 class="material-title">
+                                <a href="<?php echo $base_url; ?>/view_material.php?id=<?php echo $material['material_id']; ?>">
+                                    <?php echo htmlspecialchars($material['title']); ?>
+                                </a>
+                            </h3>
+                            <div class="material-meta">
+                                <span class="category"><?php echo htmlspecialchars($material['category']); ?></span>
+                                <span class="uploader"><?php echo htmlspecialchars($material['uploader']); ?></span>
+                                <span class="date"><?php echo formatDate($material['upload_date']); ?></span>
+                            </div>
+                            <div class="material-actions">
+                                <a href="<?php echo $base_url; ?>/view_material.php?id=<?php echo $material['material_id']; ?>" class="btn small primary">View</a>
+                                <a href="<?php echo $base_url; ?>/remove_favorite.php?id=<?php echo $material['material_id']; ?>" class="btn small danger">Remove</a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
         <!-- Recent Activities Section -->
         <div class="dashboard-section">
             <div class="section-header">
@@ -341,366 +385,9 @@ $page_title = "Dashboard";
                 </div>
             <?php endif; ?>
         </div>
-        
-        <!-- Favorite Materials Section -->
-        <div class="dashboard-section">
-            <div class="section-header">
-                <h2>Your Favorites</h2>
-                <a href="<?php echo $base_url; ?>/favorites.php" class="view-all">View All</a>
-            </div>
-            
-            <?php if (empty($favorite_materials)): ?>
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-heart"></i></div>
-                    <p>You haven't added any materials to favorites yet.</p>
-                    <a href="<?php echo $base_url; ?>/search.php" class="btn primary">Browse Materials</a>
-                </div>
-            <?php else: ?>
-                <div class="materials-grid">
-                    <?php foreach ($favorite_materials as $material): ?>
-                        <div class="material-card">
-                            <h3 class="material-title">
-                                <a href="<?php echo $base_url; ?>/view_material.php?id=<?php echo $material['material_id']; ?>">
-                                    <?php echo htmlspecialchars($material['title']); ?>
-                                </a>
-                            </h3>
-                            <div class="material-meta">
-                                <span class="category"><?php echo htmlspecialchars($material['category']); ?></span>
-                                <span class="uploader"><?php echo htmlspecialchars($material['uploader']); ?></span>
-                                <span class="date"><?php echo formatDate($material['upload_date']); ?></span>
-                            </div>
-                            <div class="material-actions">
-                                <a href="<?php echo $base_url; ?>/view_material.php?id=<?php echo $material['material_id']; ?>" class="btn small primary">View</a>
-                                <a href="<?php echo $base_url; ?>/remove_favorite.php?id=<?php echo $material['material_id']; ?>" class="btn small danger">Remove</a>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
     </div>
 </div>
 
-<style>
-    /* Dashboard specific styles with brown theme */
-    .dashboard-container {
-        padding: 2rem 0;
-    }
-    
-    .dashboard-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .dashboard-header h1 {
-        color: #8B4513;
-        margin-bottom: 0.5rem;
-    }
-    
-    .dashboard-header p {
-        color: #666;
-        font-size: 1.1rem;
-    }
-    
-    .dashboard-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .stat-card {
-        background-color: #fff;
-        border-radius: 10px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        transition: all 0.3s ease;
-        border-left: 4px solid #8B4513;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-icon {
-        font-size: 2rem;
-        color: #8B4513;
-        background-color: #FFF8DC;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-    }
-    
-    .stat-content {
-        flex: 1;
-    }
-    
-    .stat-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #8B4513;
-        line-height: 1.2;
-    }
-    
-    .stat-label {
-        color: #666;
-        font-size: 0.9rem;
-    }
-    
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 2rem;
-    }
-    
-    .dashboard-section {
-        background-color: #fff;
-        border-radius: 10px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .dashboard-section:hover {
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.8rem;
-        border-bottom: 2px solid #f0f0f0;
-    }
-    
-    .section-header h2 {
-        color: #8B4513;
-        margin: 0;
-        font-size: 1.3rem;
-    }
-    
-    .section-header .view-all {
-        color: #8B4513;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .section-header .view-all:hover {
-        color: #A0522D;
-        text-decoration: underline;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 2rem 1rem;
-    }
-    
-    .empty-icon {
-        font-size: 3rem;
-        color: #D2B48C;
-        margin-bottom: 1rem;
-    }
-    
-    .empty-state p {
-        color: #666;
-        margin-bottom: 1.5rem;
-    }
-    
-    .materials-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-    }
-    
-    .material-card {
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        padding: 1rem;
-        border: 1px solid #f0f0f0;
-        transition: all 0.3s ease;
-    }
-    
-    .material-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        border-color: #D2B48C;
-    }
-    
-    .material-title {
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        line-height: 1.3;
-    }
-    
-    .material-title a {
-        color: #333;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .material-title a:hover {
-        color: #8B4513;
-    }
-    
-    .material-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        font-size: 0.8rem;
-    }
-    
-    .material-meta span {
-        background-color: #f8f9fa;
-        padding: 0.2rem 0.5rem;
-        border-radius: 20px;
-    }
-    
-    .material-meta .category {
-        background-color: #FFF8DC;
-        color: #8B4513;
-    }
-    
-    .material-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .activity-timeline {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .activity-item {
-        display: flex;
-        gap: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .activity-item:last-child {
-        border-bottom: none;
-    }
-    
-    .activity-icon {
-        background-color: #FFF8DC;
-        color: #8B4513;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
-    }
-    
-    .activity-content {
-        flex: 1;
-    }
-    
-    .activity-time {
-        font-size: 0.8rem;
-        color: #666;
-        margin-bottom: 0.2rem;
-    }
-    
-    .activity-description {
-        color: #333;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 0.2rem 0.5rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 500;
-    }
-    
-    .status-borrowed {
-        background-color: #FFF8DC;
-        color: #8B4513;
-    }
-    
-    .status-overdue {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-    
-    .status-reserved {
-        background-color: #d1ecf1;
-        color: #0c5460;
-    }
-    
-    .table-responsive {
-        overflow-x: auto;
-    }
-    
-    .table {
-        width: 100%;
-        margin-bottom: 1rem;
-        color: #212529;
-    }
-    
-    .table th {
-        background-color: #FFF8DC;
-        color: #8B4513;
-        font-weight: 600;
-    }
-    
-    .table th, .table td {
-        padding: 0.75rem;
-        vertical-align: top;
-        border-top: 1px solid #dee2e6;
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: rgba(210, 180, 140, 0.1);
-    }
-    
-    @media (max-width: 992px) {
-        .dashboard-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    
-    @media (max-width: 768px) {
-        .dashboard-stats {
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        }
-        
-        .stat-card {
-            flex-direction: column;
-            text-align: center;
-            border-left: none;
-            border-top: 4px solid #8B4513;
-        }
-        
-        .materials-grid {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .dashboard-stats {
-            grid-template-columns: 1fr;
-        }
-        
-        .materials-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
+
 
 <?php include 'includes/footer.php'; ?>
