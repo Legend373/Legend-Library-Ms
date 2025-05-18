@@ -202,11 +202,14 @@ $user_name = $is_logged_in ? $_SESSION['username'] : '';
                 
                 <ul class="nav-menu" id="navMenu">
                     <li><a href="<?php echo $base_url; ?>/index.php" class="<?php echo $current_page === 'index.php' ? 'active' : ''; ?>">Home</a></li>
-                    <li><a href="<?php echo $base_url; ?>/search.php" class="<?php echo $current_page === 'search.php' ? 'active' : ''; ?>">Browse</a></li>
+                    
                     
                     <?php if ($is_logged_in): ?>
-                        <li><a href="<?php echo $base_url; ?>/dashboard.php" class="<?php echo $current_page === 'dashboard.php' ? 'active' : ''; ?>">Dashboard</a></li>
-                        
+                        <?php if ($_SESSION['role'] == 'student'): ?>
+                    <li><a href="<?php echo $base_url; ?>/search.php" class="<?php echo $current_page === 'search.php' ? 'active' : ''; ?>">Browse</a></li>
+                    <li><a href="<?php echo $base_url; ?>/about.php" class="<?php echo $current_page === 'about.php' ? 'active' : ''; ?>">About</a></li>
+                    <li><a href="<?php echo $base_url; ?>/dashboard.php" class="<?php echo $current_page === 'dashboard.php' ? 'active' : ''; ?>">Dashboard</a></li>
+                       <?php endif; ?> 
                         <?php if ($is_admin): ?>
                             <li><a href="<?php echo $base_url; ?>/admin.php" class="<?php echo $current_page === 'admin.php' ? 'active' : ''; ?>">Admin</a></li>
                             <?php endif; ?>
@@ -216,7 +219,7 @@ $user_name = $is_logged_in ? $_SESSION['username'] : '';
                         <?php endif; ?>
                     <?php endif; ?>
                     
-                    <li><a href="<?php echo $base_url; ?>/about.php" class="<?php echo $current_page === 'about.php' ? 'active' : ''; ?>">About</a></li>
+                    
                 </ul>
                 
                 <div class="user-menu">

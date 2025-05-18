@@ -10,6 +10,11 @@ if (!isLoggedIn()) {
     exit;
 }
 
+// Define upload directory (make sure this matches your actual directory structure)
+define('UPLOAD_DIR', $_SERVER['DOCUMENT_ROOT'] . $base_url . '/uploads/materials');
+// Define the URL path for accessing uploaded files
+define('UPLOAD_URL', $base_url . '/uploads/materials');
+
 // Get categories for dropdown
 try {
     $stmt = $conn->prepare("SELECT DISTINCT category FROM materials ORDER BY category");
@@ -99,12 +104,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mkdir(UPLOAD_DIR, 0755, true);
             }
             
-            // Generate unique filename
-            $new_file_name = uniqid('material_') . '.' . $file_ext;
+            // Generate unique filename while preserving original extension
+            $new_file_name = uniqid('material_', true) . '.' . $file_ext;
             $upload_path = UPLOAD_DIR . '/' . $new_file_name;
             
             // Move uploaded file
             if (move_uploaded_file($file_tmp, $upload_path)) {
+                // Verify file was actually moved
+                if (!file_exists($upload_path)) {
+                    throw new Exception("File upload failed - file not found after moving");
+                }
+                
                 // Save material to database
                 $stmt = $conn->prepare("
                     INSERT INTO materials (title, description, category, file_path, uploaded_by, upload_date)
@@ -131,7 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Failed to move uploaded file";
             }
         } catch(PDOException $e) {
-            $errors[] = "Upload failed: " . $e->getMessage();
+            $errors[] = "Database error: " . $e->getMessage();
+        } catch(Exception $e) {
+            $errors[] = $e->getMessage();
         }
     }
 }
@@ -140,7 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $page_title = "Upload Material";
 ?>
 <?php include 'includes/header.php'; ?>
-
 <div class="upload-container">
     <div class="upload-header">
         <h1>Upload Educational Material</h1>
@@ -238,6 +249,8 @@ $page_title = "Upload Material";
         </ul>
     </div>
 </div>
+
+<!-- Rest of your HTML remains the same -->
 
 <style>
     /* Upload page specific styles with brown theme */

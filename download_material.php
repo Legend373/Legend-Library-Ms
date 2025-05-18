@@ -3,6 +3,9 @@ require_once 'config.php';
 require_once 'includes/functions.php';
 requireLogin();
 
+// // Define upload directory path
+// define('UPLOAD_DIR', $_SERVER['DOCUMENT_ROOT'] . $base_url . '/uploads/materials');
+
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header("Location: dashboard.php");
     exit();
@@ -22,11 +25,16 @@ try {
         exit();
     }
     
-    $file_path = $material['file_path'];
+    // Construct full file path
+    $file_path = UPLOAD_DIR . '/' . basename($material['file_path']);
     
     // Check if file exists
     if (!file_exists($file_path)) {
-        die("Error: File not found.");
+        error_log("Download failed - File not found: " . $file_path);
+        $_SESSION['flash_message'] = "The requested file is no longer available.";
+        $_SESSION['flash_type'] = "danger";
+        header("Location: view_material.php?id=" . $material_id);
+        exit();
     }
     
     // Log the download
@@ -42,55 +50,34 @@ try {
     // Get file information
     $file_name = basename($file_path);
     $file_size = filesize($file_path);
-    $file_extension = pathinfo($file_path, PATHINFO_EXTENSION);
+    $file_extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
     
-    // Set appropriate content type based on file extension
-    switch (strtolower($file_extension)) {
-        case 'pdf':
-            $content_type = 'application/pdf';
-            break;
-        case 'doc':
-            $content_type = 'application/msword';
-            break;
-        case 'docx':
-            $content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            break;
-        case 'xls':
-            $content_type = 'application/vnd.ms-excel';
-            break;
-        case 'xlsx':
-            $content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            break;
-        case 'ppt':
-            $content_type = 'application/vnd.ms-powerpoint';
-            break;
-        case 'pptx':
-            $content_type = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-            break;
-        case 'jpg':
-        case 'jpeg':
-            $content_type = 'image/jpeg';
-            break;
-        case 'png':
-            $content_type = 'image/png';
-            break;
-        case 'gif':
-            $content_type = 'image/gif';
-            break;
-        case 'txt':
-            $content_type = 'text/plain';
-            break;
-        default:
-            $content_type = 'application/octet-stream';
-    }
+    // Content type mapping
+    $content_types = [
+        'pdf' => 'application/pdf',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt' => 'application/vnd.ms-powerpoint',
+        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'txt' => 'text/plain'
+    ];
+    
+    $content_type = $content_types[$file_extension] ?? 'application/octet-stream';
     
     // Clean the output buffer
     ob_clean();
+    ob_start();
     
     // Set headers for download
     header("Content-Type: $content_type");
     header("Content-Disposition: attachment; filename=\"" . $file_name . "\"");
-    header("Content-Length: $file_size");
+    header("Content-Length: " . $file_size);
     header("Cache-Control: no-cache, must-revalidate");
     header("Pragma: no-cache");
     header("Expires: 0");
@@ -100,6 +87,10 @@ try {
     exit();
     
 } catch(PDOException $e) {
-    die("Error retrieving material: " . $e->getMessage());
+    error_log("Download error: " . $e->getMessage());
+    $_SESSION['flash_message'] = "Error downloading file. Please try again.";
+    $_SESSION['flash_type'] = "danger";
+    header("Location: view_material.php?id=" . $material_id);
+    exit();
 }
 ?>

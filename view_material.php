@@ -1,5 +1,9 @@
 <?php
 require_once 'config.php';
+require_once 'includes/functions.php';
+// Define upload directory path
+define('UPLOAD_DIR', $_SERVER['DOCUMENT_ROOT'] . $base_url . '/uploads/materials');
+define('UPLOAD_URL', $base_url . '/uploads/materials');
 
 // Get material ID from URL
 $material_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -31,6 +35,14 @@ try {
     }
     
     $material = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Verify file exists
+    $material['file_exists'] = false;
+    if (!empty($material['file_path'])) {
+        $file_path = UPLOAD_DIR . '/' . $material['file_path'];
+        $material['file_exists'] = file_exists($file_path);
+    }
+    
 } catch(PDOException $e) {
     $_SESSION['flash_message'] = "Error fetching material: " . $e->getMessage();
     $_SESSION['flash_type'] = "danger";
@@ -38,25 +50,7 @@ try {
     exit;
 }
 
-
-// Check if user has favorited this material
-// $is_favorited = false;
-// if (isLoggedIn()) {
-//     try {
-//         $stmt = $conn->prepare("
-//             SELECT COUNT(*) FROM material_favorites
-//             WHERE material_id = :material_id AND user_id = :user_id
-//         ");
-//         $stmt->bindParam(':material_id', $material_id);
-//         $stmt->bindParam(':user_id', $_SESSION['user_id']);
-//         $stmt->execute();
-//         $is_favorited = ($stmt->fetchColumn() > 0);
-//     } catch(PDOException $e) {
-//         // Silently fail
-//     }
-// }
-
-// Get related materials (same category)
+// Get related materials
 try {
     $stmt = $conn->prepare("
         SELECT m.material_id, m.title, m.category, m.upload_date
@@ -70,92 +64,13 @@ try {
     $stmt->execute();
     $related_materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch(PDOException $e) {
-    // Silently fail
     $related_materials = [];
 }
 
-// Get material comments
-// try {
-//     $stmt = $conn->prepare("
-//         SELECT c.*, u.username, u.user_name
-//         FROM material_comments c
-//         JOIN users u ON c.user_id = u.user_id
-//         WHERE c.material_id = :material_id
-//         ORDER BY c.created_at DESC
-//     ");
-//     $stmt->bindParam(':material_id', $material_id);
-//     $stmt->execute();
-//     $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-// } catch(PDOException $e) {
-//     // Silently fail
-//     $comments = [];
-// }
-
-// // Process comment form
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && isLoggedIn() && isset($_POST['comment'])) {
-//     $comment_text = trim($_POST['comment']);
-    
-//     if (!empty($comment_text)) {
-//         try {
-//             $stmt = $conn->prepare("
-//                 INSERT INTO material_comments (material_id, user_id, comment, created_at)
-//                 VALUES (:material_id, :user_id, :comment, NOW())
-//             ");
-//             $stmt->bindParam(':material_id', $material_id);
-//             $stmt->bindParam(':user_id', $_SESSION['user_id']);
-//             $stmt->bindParam(':comment', $comment_text);
-//             $stmt->execute();
-            
-//             // Log activity
-//             logActivity($_SESSION['user_id'], 'comment_material', $material['title']);
-            
-//             // Redirect to avoid form resubmission
-//             header("Location: " . $base_url . "/view_material.php?id=" . $material_id);
-//             exit;
-//         } catch(PDOException $e) {
-//             $error_message = "Error posting comment: " . $e->getMessage();
-//         }
-//     }
-// }
-
-// Log view if user is logged in
-if (isLoggedIn()) {
-    logActivity($_SESSION['user_id'], 'view_material', $material['title']);
-}
-
-// Category icons mapping
-$category_icons = [
-    'Mathematics' => '📐',
-    'Science' => '🔬',
-    'Literature' => '📚',
-    'History' => '🏛️',
-    'Computer Science' => '💻',
-    'Languages' => '🌐',
-    'Arts' => '🎨',
-    'Physics' => '⚛️',
-    'Chemistry' => '🧪',
-    'Biology' => '🧬',
-    'Geography' => '🌍',
-    'Economics' => '📊',
-    'Philosophy' => '🧠',
-    'Psychology' => '🧠',
-    'Engineering' => '⚙️',
-    'Medicine' => '🩺',
-    'Law' => '⚖️',
-    'Music' => '🎵',
-    'Physical Education' => '🏃',
-    'Religion' => '🙏',
-    'Social Studies' => '👥',
-    'Technology' => '📱',
-    'Other' => '📋'
-];
-
-// Get default icon if category doesn't have a specific one
 function getCategoryIcon($category) {
     global $category_icons;
     return isset($category_icons[$category]) ? $category_icons[$category] : '📚';
-}
-
+} 
 // Page title for header
 $page_title = $material['title'];
 ?>
@@ -189,10 +104,6 @@ $page_title = $material['title'];
                 <i class="fas fa-download"></i>
                 <span><?php echo $material['download_count']; ?> downloads</span>
             </div>
-            <div class="meta-item">
-                <i class="fas fa-heart"></i>
-                <!-- <span><?php echo $material['favorite_count']; ?> favorites</span> -->
-            </div>
         </div>
     </div>
     
@@ -206,7 +117,7 @@ $page_title = $material['title'];
                     </div>
                 </div>
                 
-                <?php if (!empty($material['file_path'])): ?>
+                <?php if (!empty($material['file_path']) && $material['file_exists']): ?>
                     <div class="material-file">
                         <h2>Material File</h2>
                         <div class="file-info">
@@ -241,14 +152,6 @@ $page_title = $material['title'];
                                         case 'rar':
                                             $icon_class = 'fas fa-file-archive';
                                             break;
-                                        case 'mp3':
-                                        case 'wav':
-                                            $icon_class = 'fas fa-file-audio';
-                                            break;
-                                        case 'mp4':
-                                        case 'avi':
-                                            $icon_class = 'fas fa-file-video';
-                                            break;
                                         case 'txt':
                                             $icon_class = 'fas fa-file-alt';
                                             break;
@@ -259,17 +162,10 @@ $page_title = $material['title'];
                             <div class="file-details">
                                 <div class="file-name"><?php echo htmlspecialchars(basename($material['file_path'])); ?></div>
                                 <div class="file-size">
-                                   <?php
-                                   $file_path = __DIR__ . '/' . $material['file_path'];  // this resolves correctly
-
-if (file_exists($file_path)) {
-    $file_size = filesize($file_path);
-    echo formatFileSize($file_size);
-} else {
-    echo "File not found";
-}
-
-                                     ?>
+                                    <?php
+                                        $file_path = UPLOAD_DIR . '/' . $material['file_path'];
+                                        echo formatFileSize(filesize($file_path));
+                                    ?>
                                 </div>
                             </div>
                         </div>
@@ -278,18 +174,6 @@ if (file_exists($file_path)) {
                                 <i class="fas fa-download"></i> Download
                             </a>
                             
-                            <!-- <?php if (isLoggedIn()): ?>
-                                <?php if ($is_favorited): ?>
-                                    <a href="<?php echo $base_url; ?>/remove_favorite.php?id=<?php echo $material['material_id']; ?>&redirect=view" class="btn secondary">
-                                        <i class="fas fa-heart-broken"></i> Remove from Favorites
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?php echo $base_url; ?>/add_favorite.php?id=<?php echo $material['material_id']; ?>&redirect=view" class="btn secondary">
-                                        <i class="fas fa-heart"></i> Add to Favorites
-                                    </a>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                             -->
                             <?php if (isLoggedIn() && ($_SESSION['user_id'] == $material['uploaded_by'] || $_SESSION['role'] === 'admin')): ?>
                                 <a href="<?php echo $base_url; ?>/edit_material.php?id=<?php echo $material['material_id']; ?>" class="btn secondary">
                                     <i class="fas fa-edit"></i> Edit
@@ -299,6 +183,10 @@ if (file_exists($file_path)) {
                                 </a>
                             <?php endif; ?>
                         </div>
+                    </div>
+                <?php elseif (!empty($material['file_path'])): ?>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> The file for this material is currently unavailable.
                     </div>
                 <?php endif; ?>
                 

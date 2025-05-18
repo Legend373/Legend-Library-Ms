@@ -203,7 +203,9 @@ $page_title = "Dashboard";
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    
                 </div>
+                <a href="<?php echo $base_url; ?>/books.php" class="btn primary">Browse Books</a>
             <?php endif; ?>
         </div>
         
@@ -242,6 +244,7 @@ $page_title = "Dashboard";
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <a href="<?php echo $base_url; ?>/upload.php" class="btn primary">Upload Material</a>
             <?php endif; ?>
         </div>
 <?php endif; ?>
@@ -284,6 +287,7 @@ $page_title = "Dashboard";
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <a href="<?php echo $base_url; ?>/search.php" class="btn primary">Browse Materials</a>
             <?php endif; ?>
         </div>
         <!-- Recent Activities Section -->

@@ -244,9 +244,9 @@ $page_title = "Admin Panel";
                                         <thead>
                                             <tr>
                                                 <th>Username</th>
-                                                <th>Full Name</th>
+                                                <!-- <th>Full Name</th> -->
                                                 <th>Role</th>
-                                                <th>Status</th>
+                                                <!-- <th>Status</th> -->
                                                 <th>Joined</th>
                                             </tr>
                                         </thead>
@@ -254,9 +254,9 @@ $page_title = "Admin Panel";
                                             <?php foreach ($recent_users as $user): ?>
                                                 <tr>
                                                     <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                                    <td><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                                    <!-- <td><?php echo htmlspecialchars($user['full_name']); ?></td> -->
                                                     <td><span class="badge badge-<?php echo $user['role'] === 'admin' ? 'primary' : 'secondary'; ?>"><?php echo ucfirst($user['role']); ?></span></td>
-                                                    <td><span class="status-badge status-<?php echo $user['status']; ?>"><?php echo ucfirst($user['status']); ?></span></td>
+                                                    <!-- <td><span class="status-badge status-<?php echo $user['status']; ?>"><?php echo ucfirst($user['status']); ?></span></td> -->
                                                     <td><?php echo formatDate($user['created_at']); ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -447,7 +447,7 @@ $page_title = "Admin Panel";
             </div>
         </div>
     </div>
-</div>
+</div> 
 
 <style>
     /* Admin panel specific styles with brown theme */
